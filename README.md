@@ -27,7 +27,8 @@ No se requiere ningún paso de compilación o instalación de dependencias.
 
 1. Clona este repositorio:
    ```bash
-   git clone https://github.com/tu-usuario/tu-repositorio.git
+   git clone --branch v0.1.0-alpha --single-branch https://github.com/aabadmo4/SecureTech_PSIM.git
+
    ```
 2. Abre el archivo `psim.html` en tu navegador preferido.
 
