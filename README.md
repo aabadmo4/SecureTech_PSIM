@@ -1,47 +1,54 @@
-# 🛡️ PSIM Web Security Dashboard (Prototipo)
+# Sistema de seguridad · panel web sobre plano
 
-Una interfaz web ligera, interactiva y responsiva para la gestión integral de seguridad física (*Physical Security Information Management* - PSIM), construida completamente en **HTML5, CSS3 y JavaScript vanilla** (sin dependencias externas ni frameworks).
+Panel tipo SCADA para ver sensores de intrusión, contactos magnéticos, temperatura, humo, cámaras CCTV y el estado de centrales, expansores y grabadores, sobre el plano de la instalación. Con armado y visionado por particiones.
 
----
+PHP 8.1+ (extensión `pdo_sqlite`) + SQLite. Sin dependencias ni Composer.
 
-## 🌟 Características Principales
+## Arranque rápido
 
-- **Plano Interactivo vectorizado (SVG):** Visualización de plantas de instalación con estados de dispositivos representados dinámicamente en tiempo real.
-- **Simulación de Vídeo CCTV:** Canvas interactivo que simula señal en vivo de cámaras, incluyendo detección de movimiento y pérdida de señal.
-- **Gestión de Particiones:** Control para armar/desarmar áreas independientes (Planta Baja, Zona Noche, Garaje) y armado general del sistema.
-- **Monitoreo de Sensores:** Soporte visual para:
-  - Cámaras CCTV
-  - Contactos magnéticos de puertas/ventanas
-  - Sensores PIR de movimiento
-  - Sensores de temperatura ambiental
-  - Detectores de humo
-  - Equipos principales (Central de Alarma, Expansores, NVR)
-- **Registro de Eventos (Log):** Consola dinámica con alertas en tiempo real categorizadas por nivel (*Normal*, *Aviso*, *Alarma*).
-- **Diseño Adaptativo (Responsive):** Totalmente funcional en escritorios, tabletas y dispositivos móviles.
+```bash
+php bin/seed.php                              # crea la base de datos con los datos de ejemplo
+php bin/simulator.php &                       # genera eventos simulados (dejar en marcha)
+php -S 0.0.0.0:8080 -t public public/index.php
+```
 
----
+Abre http://localhost:8080
 
-## 🚀 Inicio Rápido
+## Estructura
 
-No se requiere ningún paso de compilación o instalación de dependencias.
+| Ruta | Qué hace |
+|---|---|
+| `public/index.html` | Frontend (SVG + JS sin frameworks). Consulta `/api/state` cada 2 s |
+| `public/index.php` | Router de la API |
+| `src/Engine.php` | Lógica: estado, armado, alarmas y eventos |
+| `src/Db.php` | Conexión SQLite y carga de configuración |
+| `db/schema.sql` | Tablas: `partitions`, `plans`, `rooms`, `devices`, `events` |
+| `db/seed.json` | Datos de ejemplo (2 plantas, 3 particiones, 41 dispositivos) |
+| `bin/simulator.php` | Sustituye al hardware real mientras desarrollas |
+| `docs/prototipo-simulado.html` | Prototipo de un solo archivo, sin servidor |
 
-1. Clona este repositorio:
-   ```bash
-   git clone --branch v0.1.0-alpha --single-branch https://github.com/aabadmo4/SecureTech_PSIM.git
+## API
 
-   ```
-2. Abre el archivo `psim.html` en tu navegador preferido.
+| Método y ruta | Descripción |
+|---|---|
+| `GET /api/config` | Planos, estancias, particiones y dispositivos |
+| `GET /api/state` | Estado en vivo y últimos 10 eventos |
+| `POST /api/partitions/{id}/arm` | `{"armed":true}` arma o desarma una partición |
+| `POST /api/ack` | Reconoce las alarmas |
+| `POST /api/devices/{id}/state` | Entrada para hardware real. Cabecera `X-API-Key` = variable `SEG_API_KEY`. Cuerpo: `{"open":true}`, `{"v":21.5}`, `{"off":true}`... |
 
----
+Un contacto o PIR solo genera evento y alarma si su partición está armada. El estado del icono se actualiza siempre.
 
-## 🛠️ Tecnologías Utilizadas
+## ⚠️ Pendiente antes de usarlo de verdad
 
-* **HTML5 & SVG:** Renderizado de planos arquitectónicos y simbología de seguridad vectorizada.
-* **CSS Custom Properties & Grid/Flexbox:** Diseño adaptable con temas dinámicos (modo claro/oscuro).
-* **JavaScript Vanilla:** Lógica de simulación de eventos, manipulación del DOM y animación en Canvas HTML5.
+- **Login y permisos.** Armar, desarmar y reconocer alarmas no piden autenticación. No lo expongas fuera de una red local de confianza hasta añadirlo.
+- Las credenciales de cámaras y central deben quedarse en el servidor, nunca en el navegador.
 
----
+## Hoja de ruta
 
-## 📄 Licencia
-
-Este proyecto está bajo la Licencia **MIT**. Consulta el archivo `LICENSE` para más información.
+1. Login (sesión) y permisos por usuario y partición.
+2. Puente MQTT en PHP CLI (`php-mqtt/client`) que llame a `Engine::update()`.
+3. Cámaras reales con [go2rtc](https://github.com/AlexxIT/go2rtc): sustituir el canvas simulado por WebRTC/HLS.
+4. SSE en lugar de polling si hace falta menos latencia.
+5. Editor de planos (arrastrar iconos y guardar posición).
+6. Historial de temperaturas y pantalla de eventos con filtros.
